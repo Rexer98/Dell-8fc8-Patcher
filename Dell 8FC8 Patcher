@@ -1,0 +1,194 @@
+Imports System.Globalization
+Imports System.IO
+Imports System.Text.RegularExpressions
+
+Namespace Module8FC8
+    Public Module Module8FC8
+        Public Function Main(ByVal args As String()) As Integer
+            Dim matchFound = False
+            ' If no argument is provided then print usage hint
+            If args.Length < 1 Then
+                Console.WriteLine("Rex98-8FC8-Patcher" + vbCrLf + "Usage: Rex_8FC8_patcher.exe <locked bios.bin>")
+                Console.Write($"{Environment.NewLine}Press any key to exit...")
+                Console.ReadKey(True)
+                Return -1
+            End If
+
+            Console.Title = "Rex98-8FC8-Patcher"
+            Console.ForegroundColor = ConsoleColor.Green
+            Console.WriteLine("Rex98 **Dell-8FC8-Patcher**")
+            Console.WriteLine("@Tecshack Cebu" + vbCrLf)
+            System.Threading.Thread.Sleep(1000)
+
+            Console.ForegroundColor = ConsoleColor.Cyan
+            Console.WriteLine("Pag huwat ky ga patch pa!...in file " + args(0))
+            ' Read the provided file
+            Dim bytes = File.ReadAllBytes(args(0))
+            ' Extract the file name for saving later
+            Dim filename As String = Path.GetFileName(args(0))
+
+            Dim signo As String = "5AA5F00F03"
+            Dim findsigno As Byte() = ConvertHexStringToByteArray(signo)
+
+            For Each index In SignoAt(bytes, findsigno)
+                Dim i = index, findIndex = 0
+                While i < bytes.Length AndAlso findIndex < findsigno.Length
+                    bytes(i) = findsigno(findIndex)
+                    i += 1
+                    findIndex += 1
+                End While
+                Console.ForegroundColor = ConsoleColor.White
+                Console.WriteLine(vbCrLf + "nakit-an ang intel signature sa offset 0x{0:X}", index)
+                matchFound = True
+            Next
+            If matchFound Then
+                ' Nothing to do/save just clear the matchFound flag
+                matchFound = False
+            Else
+                ' Probably corrupted or not BIOS dump ( EC dump?...)
+                Console.ForegroundColor = ConsoleColor.Red
+                Console.WriteLine(vbCrLf + "wa nakit-an ang intel signature" + vbCrLf)
+                Console.ForegroundColor = ConsoleColor.White
+                Console.Write($"{Environment.NewLine}Pinduta bisan unsang key para ma exit...")
+                Console.ReadKey(True)
+                Return -1
+            End If
+
+            Console.ForegroundColor = ConsoleColor.Cyan
+            Console.WriteLine(vbCrLf + "Ga check sa unang pattern..." + vbCrLf)
+            ' Match 00FCAA and after that any 2 hexadecimal characters and after that match 00000000 and after that any 2 ore more hexadecimal characters
+            Dim firstpattern As String = "^00FCAA([0-9A-Fa-f]{2,4})000000([0-9A-Fa-f]{2,})$"
+            ' Characters to be replaced
+            Dim firstrbytes As String = "00FC00"
+            ' Because we have read the file binary(hexadecimal) must convert to byte array for replace a byte(one character) at once
+            Dim replacefirst As Byte() = ConvertHexStringToByteArray(firstrbytes)
+            ' Search for offset beginning with the pattern 00FCAA
+            For Each index In PatternAt(bytes, firstpattern)
+                Dim i = index, replaceIndex = 0
+                ' Replace first 6 characters with 00FC00 at offset = index
+                While i < bytes.Length AndAlso replaceIndex < replacefirst.Length
+                    bytes(i) = replacefirst(replaceIndex)
+                    i += 1
+                    replaceIndex += 1
+                End While
+                ' Print the result...if any...
+                Console.ForegroundColor = ConsoleColor.Yellow
+                Console.WriteLine("nakit-an ang pattern sa offset {0:X} og giilisan.", index)
+                matchFound = True
+            Next
+
+            If matchFound Then
+                Try ' Write first pattern findings to file
+                    File.WriteAllBytes("patched_" & filename, bytes)
+                    matchFound = False
+                Catch ex As Exception
+                    Console.WriteLine(ex)
+                    Console.Write($"{Environment.NewLine}Pinduta bisan unsang key para ma exit...")
+                    Console.ReadKey(True)
+                    Return -1
+                End Try
+            Else
+                Console.ForegroundColor = ConsoleColor.Red
+                Console.WriteLine(vbCrLf + "Wa nakita ang unang patern" + vbCrLf)
+            End If
+
+            Console.ForegroundColor = ConsoleColor.Cyan
+            Console.WriteLine(vbCrLf + "Kalma hapit na!..." + vbCrLf)
+
+            Dim secondpattern As String = "^00FDAA([0-9A-Fa-f]{2,4})000000([0-9A-Fa-f]{2,})$"
+            Dim secondrbytes As String = "00FD00"
+            Dim replacesecond As Byte() = ConvertHexStringToByteArray(secondrbytes)
+
+            For Each index In PatternAt(bytes, secondpattern)
+                Dim i = index, replaceIndex = 0
+
+                While i < bytes.Length AndAlso replaceIndex < replacesecond.Length
+                    bytes(i) = replacesecond(replaceIndex)
+                    i += 1
+                    replaceIndex += 1
+                End While
+                Console.ForegroundColor = ConsoleColor.Yellow
+                Console.WriteLine("nakit-an ang pattern sa offset {0:X} og giilisan.", index)
+                matchFound = True
+            Next
+
+            If matchFound Then
+                Try
+                    File.WriteAllBytes("patched_" & filename, bytes)
+                Catch ex As Exception
+                    Console.WriteLine(ex)
+                    Console.Write($"{Environment.NewLine}Pinduta bisan unsang key para ma exit...")
+                    Console.ReadKey(True)
+                    Return -1
+                End Try
+                Console.ForegroundColor = ConsoleColor.Cyan
+                Console.WriteLine(vbCrLf + vbCrLf + "na patched og gi saved as patched_" + filename + vbCrLf + vbCrLf + "Don't Forget to say Thanks to Rex98 & Techshack Cebu for this freeware.")
+                Console.ForegroundColor = ConsoleColor.White
+                Console.WriteLine(vbCrLf + "My Telegram channel link:")
+                Console.ForegroundColor = ConsoleColor.DarkYellow
+                Console.WriteLine(vbCrLf + "https://t.me/BiosUnlockingPhilippines")
+                Console.ForegroundColor = ConsoleColor.White
+
+                Console.WriteLine(vbCrLf + "Buy me a Coffe")
+                Console.ForegroundColor = ConsoleColor.DarkYellow
+                Console.WriteLine(vbCrLf + "https://paypal.me/rexer98?country.x=PH&locale.x=en_US")
+                Console.WriteLine(vbCrLf + "Gcash: 09633813409")
+
+                Console.ForegroundColor = ConsoleColor.White
+                Console.Write($"{Environment.NewLine}Pinduta bisan unsang key para ma exit...")
+                Console.ReadKey(True)
+                Return 0
+            Else
+                Console.ForegroundColor = ConsoleColor.Red
+                Console.WriteLine(vbCrLf + "wa na patch...ky wa makita ang pattern" + vbCrLf)
+                Console.ForegroundColor = ConsoleColor.White
+                Console.Write($"{Environment.NewLine}Pinduta bisan unsang key para ma exit...")
+                Console.ReadKey(True)
+                Return -1
+            End If
+
+        End Function
+
+        ' Returns the offset where the searched pattern is found in source string
+        Private Iterator Function PatternAt(ByVal source As Byte(), ByVal pattern As String) As IEnumerable(Of Integer)
+            Dim regex As New Regex(pattern)
+            For i = 0 To source.Length - 1
+                Dim source1 As Byte() = source.Skip(i).Take(pattern.Length).ToArray()
+                If regex.IsMatch(ByteArrayToString(source1)) Then
+                    Yield i
+                End If
+                If i >= &H160000 Then Exit For
+            Next
+        End Function
+
+        ' Returns the offset where the Intel signature is found in source string
+        Private Iterator Function SignoAt(ByVal source As Byte(), ByVal pattern As Byte()) As IEnumerable(Of Integer)
+            For i = 0 To source.Length - 1
+                If source.Skip(i).Take(pattern.Length).SequenceEqual(pattern) Then
+                    Yield i
+                End If
+                If i >= &H1000 Then Exit For
+            Next
+        End Function
+
+        Private Function ConvertHexStringToByteArray(ByVal hexString As String) As Byte()
+            If hexString.Length Mod 2 <> 0 Then
+                Throw New ArgumentException(String.Format(CultureInfo.InvariantCulture, "The binary key cannot have an odd number of digits: {0}", hexString))
+            End If
+
+            Dim data = New Byte(hexString.Length / 2 - 1) {}
+            For index = 0 To data.Length - 1
+                Dim byteValue = hexString.Substring(index * 2, 2)
+                data(index) = Byte.Parse(byteValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture)
+            Next
+
+            Return data
+        End Function
+
+        Private Function ByteArrayToString(byteArray As Byte()) As String
+            Return BitConverter.ToString(byteArray).Replace("-", "")
+        End Function
+
+    End Module
+End Namespace
+
